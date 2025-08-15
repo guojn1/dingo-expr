@@ -9,6 +9,8 @@ import io.dingodb.expr.common.type.Types;
 import io.dingodb.expr.runtime.ExprConfig;
 import io.dingodb.expr.runtime.op.BinaryOp;
 import io.dingodb.expr.runtime.op.OpKey;
+
+import java.io.Serial;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;
@@ -21,6 +23,7 @@ public final class GtOpFactory extends GtOp {
     private static final long serialVersionUID = -7176134524706605436L;
     public static final GtOpFactory INSTANCE = new GtOpFactory();
     private final Map<Object, GtOp> opMap = new HashMap();
+    private static final GtAnyAny gtAnyAny = new GtAnyAny();
 
     private GtOpFactory() {
         this.opMap.put(this.keyOf(Types.FLOAT, Types.FLOAT), new GtFloatFloat());
@@ -46,7 +49,7 @@ public final class GtOpFactory extends GtOp {
         }
 
         protected Boolean evalNonNullValue(@NonNull Object value0, @NonNull Object value1, ExprConfig config) {
-            return gt((Float)value0, (Float)value1);
+            return gtAnyAny.evalNonNullValue(value0, value1, config);
         }
 
         public OpKey getKey() {
@@ -145,7 +148,7 @@ public final class GtOpFactory extends GtOp {
         }
 
         protected Boolean evalNonNullValue(@NonNull Object value0, @NonNull Object value1, ExprConfig config) {
-            return gt((Integer)value0, (Integer)value1);
+            return gtAnyAny.evalNonNullValue(value0, value1, config);
         }
 
         public OpKey getKey() {
@@ -175,7 +178,7 @@ public final class GtOpFactory extends GtOp {
         }
 
         protected Boolean evalNonNullValue(@NonNull Object value0, @NonNull Object value1, ExprConfig config) {
-            return gt((Long)value0, (Long)value1);
+            return gtAnyAny.evalNonNullValue(value0, value1, config);
         }
 
         public OpKey getKey() {
@@ -205,12 +208,54 @@ public final class GtOpFactory extends GtOp {
         }
 
         protected Boolean evalNonNullValue(@NonNull Object value0, @NonNull Object value1, ExprConfig config) {
-            return gt((Double)value0, (Double)value1);
+            return gtAnyAny.evalNonNullValue(value0, value1, config);
         }
 
         public OpKey getKey() {
             return this.keyOf(Types.DOUBLE, Types.DOUBLE);
         }
     }
+
+    public static final class GtAnyAny extends GtOp {
+
+        @Serial
+        private static final long serialVersionUID = 5907830950194578113L;
+
+        public GtAnyAny() {
+        }
+
+        protected Boolean evalNonNullValue(@NonNull Object value0, @NonNull Object value1, ExprConfig config) {
+            return gt(toBigDecimal(value0), toBigDecimal(value1));
+        }
+
+        public OpKey getKey() {
+            return this.keyOf(Types.ANY, Types.ANY);
+        }
+
+        private final BigDecimal toBigDecimal(@NonNull Object value) {
+            //This is a ugly way to deal with the parameter types.
+            //Should not be merged into main branch.
+            BigDecimal result = null;
+
+            if(value instanceof BigDecimal) {
+                result = (BigDecimal)value;
+            } else if(value instanceof Integer) {
+                result = new BigDecimal((Integer)value);
+            } else if(value instanceof Long) {
+                result = new BigDecimal((Long)value);
+            } else if(value instanceof Float) {
+                result = new BigDecimal((Float)value);
+            } else if(value instanceof Double) {
+                result = new BigDecimal((Double)value);
+            } else if(value instanceof String) {
+                result = new BigDecimal((String)value);
+            } else {
+                result = (BigDecimal) value;
+            }
+
+            return result;
+        }
+    }
+
 }
 
